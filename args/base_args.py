@@ -72,6 +72,12 @@ class BaseArgs:
     elif opt.dset_name == 'bouncing_balls':
       opt.n_channels = 1
       opt.image_size = (128, 128)
+    elif opt.dset_name == "3bp":
+      opt.n_channels = 3
+      opt.image_size = (36, 36)
+    elif opt.dset_name == "spring":
+      opt.n_channels = 3
+      opt.image_size = (32, 32)
     else:
       raise NotImplementedError
 

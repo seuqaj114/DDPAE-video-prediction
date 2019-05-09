@@ -4,7 +4,7 @@ python train.py \
   --n_workers 4 \
   --ckpt_dir $HOME/Documents/prog/phd/ddpae/ckpt \
   --dset_dir $HOME/Documents/prog/phd/ddpae \
-  --dset_name moving_mnist \
+  --dset_name spring \
   --evaluate_every 1 \
   --lr_init 1e-3 \
   --lr_decay 1 \
@@ -12,7 +12,7 @@ python train.py \
   --batch_size 64 \
   --n_components 2 \
   --stn_scale_prior 2 \
-  --ckpt_name 200k \
-  --n_frames_input 4 \
-  --n_frames_output 10 \
+  --ckpt_name spring \
+  --n_frames_input 3 \
+  --n_frames_output 7 \
   --save_every 10

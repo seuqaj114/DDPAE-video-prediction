@@ -17,6 +17,7 @@ from models.networks.encoder import ImageEncoder
 from models.networks.decoder import ImageDecoder
 import utils
 
+device = "cpu"
 
 class DDPAE(BaseModel):
   '''
@@ -61,12 +62,12 @@ class DDPAE(BaseModel):
     # Priors
     self.scale = opt.stn_scale_prior
     # Initial pose prior
-    self.initial_pose_prior_mu = Variable(torch.cuda.FloatTensor([self.scale, 0, 0]))
-    self.initial_pose_prior_sigma = Variable(torch.cuda.FloatTensor([0.2, 1, 1]))
+    self.initial_pose_prior_mu = Variable(torch.FloatTensor([self.scale, 0, 0]))
+    self.initial_pose_prior_sigma = Variable(torch.FloatTensor([0.2, 1, 1]))
     # Beta prior
     sd = 0.1
-    self.beta_prior_mu = Variable(torch.zeros(self.pose_latent_size).cuda())
-    self.beta_prior_sigma = Variable(torch.ones(self.pose_latent_size).cuda() * sd)
+    self.beta_prior_mu = Variable(torch.zeros(self.pose_latent_size).to(device))
+    self.beta_prior_sigma = Variable(torch.ones(self.pose_latent_size).to(device) * sd)
 
   def setup_networks(self):
     '''
@@ -81,7 +82,7 @@ class DDPAE(BaseModel):
     pose_model = PoseRNN(self.n_components, self.n_frames_output, self.n_channels,
                          self.image_size, self.image_latent_size, self.hidden_size,
                          self.ngf, self.pose_latent_size, self.independent_components)
-    self.pose_model = nn.DataParallel(pose_model.cuda())
+    self.pose_model = nn.DataParallel(pose_model.to(device))
 
     self.nets['pose_model'] = self.pose_model
     self.guide_modules['pose_model'] = self.pose_model
@@ -89,7 +90,7 @@ class DDPAE(BaseModel):
     # Content LSTM
     content_lstm = SequenceEncoder(self.content_latent_size, self.hidden_size,
                                    self.content_latent_size * 2)
-    self.content_lstm = nn.DataParallel(content_lstm.cuda())
+    self.content_lstm = nn.DataParallel(content_lstm.to(device))
     self.nets['content_lstm'] = self.content_lstm
     self.model_modules['content_lstm'] = self.content_lstm
 
@@ -99,8 +100,8 @@ class DDPAE(BaseModel):
                                   self.ngf, n_layers)
     object_decoder = ImageDecoder(self.content_latent_size, self.n_channels,
                                   self.ngf, n_layers, 'sigmoid')
-    self.object_encoder = nn.DataParallel(object_encoder.cuda())
-    self.object_decoder = nn.DataParallel(object_decoder.cuda())
+    self.object_encoder = nn.DataParallel(object_encoder.to(device))
+    self.object_decoder = nn.DataParallel(object_decoder.to(device))
     self.nets.update({'object_encoder': self.object_encoder,
                       'object_decoder': self.object_decoder})
     self.model_modules['decoder'] = self.object_decoder
@@ -184,8 +185,8 @@ class DDPAE(BaseModel):
     batch_size = input.size(0)
     # z prior
     N = batch_size * self.total_components
-    z_prior_mu = Variable(torch.zeros(N, self.content_latent_size).cuda())
-    z_prior_sigma = Variable(torch.ones(N, self.content_latent_size).cuda())
+    z_prior_mu = Variable(torch.zeros(N, self.content_latent_size).to(device))
+    z_prior_sigma = Variable(torch.ones(N, self.content_latent_size).to(device))
     z = self.pyro_sample('content', dist.Normal, z_prior_mu, z_prior_sigma, sample=True)
 
     # input_beta prior
@@ -364,7 +365,7 @@ class DDPAE(BaseModel):
       components = components[:, self.n_frames_input:, ...]
 
     # pyro observe
-    sd = Variable(0.3 * torch.ones(*decoded_output.size()).cuda())
+    sd = Variable(0.3 * torch.ones(*decoded_output.size()).to(device))
     pyro.sample('obs', dist.Normal(decoded_output, sd), obs=observation)
 
   def guide(self, input, output):
@@ -385,8 +386,8 @@ class DDPAE(BaseModel):
     param output: video of size (batch_size, self.n_frames_output, C, H, W)
     Return video_dict, loss_dict
     '''
-    input = Variable(input.cuda(), requires_grad=False)
-    output = Variable(output.cuda(), requires_grad=False)
+    input = Variable(input.to(device), requires_grad=False)
+    output = Variable(output.to(device), requires_grad=False)
     assert input.size(1) == self.n_frames_input
 
     # SVI
@@ -409,9 +410,9 @@ class DDPAE(BaseModel):
     '''
     Return decoded output.
     '''
-    input = Variable(input.cuda())
+    input = Variable(input.to(device))
     batch_size, _, _, H, W = input.size()
-    output = Variable(output.cuda())
+    output = Variable(output.to(device))
     gt = torch.cat([input, output], dim=1)
 
     latent = self.encode(input, sample=False)

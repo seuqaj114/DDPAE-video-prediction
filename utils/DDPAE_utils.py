@@ -4,6 +4,8 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 
+device = "cpu"
+
 def expand_pose(pose):
   '''
   param pose: N x 3
@@ -12,8 +14,8 @@ def expand_pose(pose):
               [0,s,y]]
   '''
   n = pose.size(0)
-  expansion_indices = Variable(torch.LongTensor([1, 0, 2, 0, 1, 3]).cuda(), requires_grad=False)
-  zeros = Variable(torch.zeros(n, 1).cuda(), requires_grad=False)
+  expansion_indices = Variable(torch.LongTensor([1, 0, 2, 0, 1, 3]).to(device), requires_grad=False)
+  zeros = Variable(torch.zeros(n, 1).to(device), requires_grad=False)
   out = torch.cat([zeros, pose], dim=1)
   return torch.index_select(out, 1, expansion_indices).view(n, 2, 3)
 
@@ -23,7 +25,7 @@ def pose_inv(pose):
   [s,x,y] -> [1/s,-x/s,-y/s]
   '''
   N, _ = pose.size()
-  ones = Variable(torch.ones(N, 1).cuda(), requires_grad=False)
+  ones = Variable(torch.ones(N, 1).to(device), requires_grad=False)
   out = torch.cat([ones, -pose[:, 1:]], dim=1)
   out = out / pose[:, 0:1]
   return out
@@ -38,8 +40,8 @@ def pose_inv_full(pose):
   # A^{-1}
   # Calculate determinant
   determinant = (pose[:, 0] * pose[:, 4] - pose[:, 1] * pose[:, 3] + 1e-8).view(N, 1)
-  indices = Variable(torch.LongTensor([4, 1, 3, 0]).cuda())
-  scale = Variable(torch.Tensor([1, -1, -1, 1]).cuda())
+  indices = Variable(torch.LongTensor([4, 1, 3, 0]).to(device))
+  scale = Variable(torch.Tensor([1, -1, -1, 1]).to(device))
   A_inv = torch.index_select(pose, 1, indices) * scale / determinant
   A_inv = A_inv.view(N, 2, 2)
   # b' = - A^{-1} b

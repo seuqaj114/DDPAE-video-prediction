@@ -6,6 +6,8 @@ import torch.nn.functional as F
 
 from models.networks.encoder import ImageEncoder
 
+device = "cpu"
+
 class PoseRNN(nn.Module):
   '''
   The backbone model. CNN + 2D LSTM.
@@ -66,7 +68,7 @@ class PoseRNN(nn.Module):
     input_reprs = self.image_encoder(input.view(-1, n_channels, H, W))
     input_reprs = input_reprs.view(batch_size, n_frames_input, -1)
     # Initial zero hidden states (as input to lstm)
-    prev_hidden = [Variable(torch.zeros(batch_size, 1, self.hidden_size).cuda())] * n_frames_input
+    prev_hidden = [Variable(torch.zeros(batch_size, 1, self.hidden_size).to(device))] * n_frames_input
 
     encoder_outputs = [] # all components
     hidden_states = []
@@ -112,7 +114,7 @@ class PoseRNN(nn.Module):
     batch_size = encoder_outputs.size(0)
     pred_beta_mu, pred_beta_sigma = None, None
     pred_outputs = []
-    prev_hidden = [Variable(torch.zeros(batch_size, 1, self.hidden_size).cuda())] \
+    prev_hidden = [Variable(torch.zeros(batch_size, 1, self.hidden_size).to(device))] \
                        * self.n_frames_output
     for i in range(self.n_components):
       hidden = hidden_states[i]
